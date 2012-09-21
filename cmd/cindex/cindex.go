@@ -92,6 +92,7 @@ func main() {
 		for _, arg := range ix.Paths() {
 			args = append(args, arg)
 		}
+		ix.Close()
 	}
 
 	// Translate paths to absolute paths so that we can
@@ -153,6 +154,7 @@ func main() {
 		log.Printf("merge %s %s", master, file)
 		index.Merge(file+"~", master, file)
 		os.Remove(file)
+		os.Remove(master)
 		os.Rename(file+"~", master)
 	}
 	log.Printf("done")

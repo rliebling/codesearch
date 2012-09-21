@@ -70,6 +70,10 @@ func Create(file string) *IndexWriter {
 	}
 }
 
+func (ixw *IndexWriter) Close() {
+	ixw.main.finish().Close()
+}
+
 // A postEntry is an in-memory (trigram, file#) pair.
 type postEntry uint64
 

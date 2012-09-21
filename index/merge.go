@@ -32,8 +32,10 @@ package index
 
 import (
 	"encoding/binary"
+	"fmt"
 	"os"
 	"strings"
+//	"time"
 )
 
 // An idrange records that the half-open interval [lo, hi) maps to [new, new+hi-lo).
@@ -52,7 +54,9 @@ type postIndex struct {
 // for a path, src2 is assumed to be newer and is given preference.
 func Merge(dst, src1, src2 string) {
 	ix1 := Open(src1)
+	defer ix1.Close()
 	ix2 := Open(src2)
+	defer ix2.Close()
 	paths1 := ix1.Paths()
 	paths2 := ix2.Paths()
 
@@ -60,6 +64,7 @@ func Merge(dst, src1, src2 string) {
 	var i1, i2, new uint32
 	var map1, map2 []idrange
 	for _, path := range paths2 {
+		//fmt.Println("paths2 iter:", path)
 		// Determine range shadowed by this path.
 		old := i1
 		for i1 < uint32(ix1.numName) && ix1.Name(i1) < path {
@@ -82,7 +87,8 @@ func Merge(dst, src1, src2 string) {
 		// Because we are iterating over the ix2 paths,
 		// there can't be gaps, so it must start at i2.
 		if i2 < uint32(ix2.numName) && ix2.Name(i2) < path {
-			panic("merge: inconsistent index")
+			s:=fmt.Sprintf("merge: inconsistent index %v %v %v" , i2 , ix2.Name(i2), path)
+			panic(s)
 		}
 		lo = i2
 		for i2 < uint32(ix2.numName) && ix2.Name(i2) < limit {
@@ -100,7 +106,7 @@ func Merge(dst, src1, src2 string) {
 		new += uint32(ix1.numName) - i1
 	}
 	if i2 < uint32(ix2.numName) {
-		panic("merge: inconsistent index")
+		panic(fmt.Sprintf("merge: inconsistent index2 %d %s %s", i2, uint32(ix2.numName), ix2.Name(i2)))
 	}
 	numName := new
 
@@ -125,6 +131,7 @@ func Merge(dst, src1, src2 string) {
 			continue
 		}
 		last = p
+		//fmt.Println("paths merged: " , p)
 		ix3.writeString(p)
 		ix3.writeString("\x00")
 	}
@@ -141,6 +148,7 @@ func Merge(dst, src1, src2 string) {
 			for i := map1[mi1].lo; i < map1[mi1].hi; i++ {
 				name := ix1.Name(i)
 				nameIndexFile.writeUint32(ix3.offset() - nameData)
+				//fmt.Println("merged name1:", name)
 				ix3.writeString(name)
 				ix3.writeString("\x00")
 				new++
@@ -150,17 +158,18 @@ func Merge(dst, src1, src2 string) {
 			for i := map2[mi2].lo; i < map2[mi2].hi; i++ {
 				name := ix2.Name(i)
 				nameIndexFile.writeUint32(ix3.offset() - nameData)
+				//fmt.Println("merged name2:", name)
 				ix3.writeString(name)
 				ix3.writeString("\x00")
 				new++
 			}
 			mi2++
 		} else {
-			panic("merge: inconsistent index")
+			panic(fmt.Sprintf("merge: inconsistent index3"))
 		}
 	}
 	if new*4 != nameIndexFile.offset() {
-		panic("merge: inconsistent index")
+		panic(fmt.Sprintf("merge: inconsistent index4 %d %d", new*4, nameIndexFile.offset()))
 	}
 	nameIndexFile.writeUint32(ix3.offset())
 
@@ -226,6 +235,7 @@ func Merge(dst, src1, src2 string) {
 	ix3.writeUint32(postIndex)
 	ix3.writeString(trailerMagic)
 	ix3.flush()
+	ix3.finish().Close()
 
 	os.Remove(nameIndexFile.name)
 	os.Remove(w.postIndexFile.name)
