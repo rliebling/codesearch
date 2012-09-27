@@ -29,3 +29,11 @@ func mmapFile(f *os.File) mmapData {
 	}
 	return mmapData{f, data[:n], 0}
 }
+
+func unmmapFile(mm *mmapData) {
+  err := syscall.Munmap(mm.d)
+  if err != nil {
+    log.Fatal(err)
+  }
+}
+
