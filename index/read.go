@@ -428,7 +428,7 @@ func mmap(file string) mmapData {
 
 func (ix Index) Close() {
 	unmmapFile(&ix.data)
-	//ix.data.f.Close()
+	ix.data.f.Close()
 }
 
 // File returns the name of the index file to use.
